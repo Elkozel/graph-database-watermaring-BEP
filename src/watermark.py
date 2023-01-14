@@ -1,16 +1,22 @@
 from typing import Any, List
 from random import randint, randrange
+from base64 import b64encode
 import sys
 
-def embed_watermark(document, key: str, watermark: str = ""):
+def embed_watermark(document, key: int, identity: str, field: str, fields: List[str]):
     """
     Embed the watermark inside the document
 
     :param document the document, where the watermark should be embedded
     :param str key the key used for the embedding process
-    :param str watermark the watermark, which needs to be embedded
+    :param str indetity the indetity, which the watermark will carry
+    :param str field the field, into which the watermark will be embedded
+    :param List[str] fields the fields, which will be used to generate the watermark
     """
-    return document
+    concatinated_fields = [document[field] for field in fields]
+    watermark = hash(identity + concatinated_fields + b64encode(key)) % 11706361
+    document[field] = watermark
+    return watermark
 
 
 

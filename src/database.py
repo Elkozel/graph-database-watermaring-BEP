@@ -95,13 +95,3 @@ def populate_fake_data(session, records: int = 25, relations:int = randrange(10)
                 continue
             # Create a connection 
             session.execute_write(create_relation, source_id=s, dest_id=arr[connection])
-
-def populate_uk_companies(link):
-    """
-    Populate the database with the uk_companies dataset
-
-    :param link 
-    """
-    link.run("CREATE CONSTRAINT ON (c:Company) ASSERT c.companyNumber IS UNIQUE;"
-             "CREATE CONSTRAINT ON (p:Property) ASSERT p.titleNumber IS UNIQUE;")
-    link.run()
