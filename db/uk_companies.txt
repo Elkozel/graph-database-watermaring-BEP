@@ -3,16 +3,16 @@ CREATE CONSTRAINT FOR (c:Company) REQUIRE c.companyNumber IS UNIQUE;
 //CREATE CONSTRAINT FOR (p:Person) REQUIRE (p.birthMonth, p.birthYear, p.name) IS NODE KEY
 CREATE CONSTRAINT FOR (p:Property) REQUIRE p.titleNumber IS UNIQUE;
 
-LOAD CSV WITH HEADERS FROM "file:///D:/Web\ Downloads/PSCAmericans.csv" AS row1
+LOAD CSV WITH HEADERS FROM "https://guides.neo4j.com/ukcompanies/data/PSCAmericans.csv" AS row1
 MERGE (c:Company {companyNumber: row1.company_number});
 
-LOAD CSV WITH HEADERS FROM "file://D:/Web\ Downloads/PSCAmericans.csv" AS row2
+LOAD CSV WITH HEADERS FROM "https://guides.neo4j.com/ukcompanies/data/PSCAmericans.csv" AS row2
 MERGE (p:Person {name: row2.`data.name`, birthYear: row2.`data.date_of_birth.year`, birthMonth: row2.`data.date_of_birth.month`})
 ON CREATE SET p.nationality = row2.`data.nationality`,
-              p.countryOfResidence = row2.`data.country_of_residence`
+              p.countryOfResidence = row2.`data.country_of_residence`;
               // TODO: Address;
 
-LOAD CSV WITH HEADERS FROM "file://D:\Web\ Downloads/PSCAmericans.csv" AS row3
+LOAD CSV WITH HEADERS FROM "https://guides.neo4j.com/ukcompanies/data/PSCAmericans.csv" AS row3
 MATCH (c:Company {companyNumber: row3.company_number})
 MATCH (p:Person {name: row3.`data.name`, birthYear: row3.`data.date_of_birth.year`, birthMonth: row3.`data.date_of_birth.month`})
 MERGE (p)-[r:HAS_CONTROL]->(c)
@@ -46,6 +46,6 @@ SET p.address = row6.`Property Address`,
 MERGE (c)-[r:OWNS]->(p)
 WITH row6, c,r,p WHERE row6.`Date Proprietor Added` IS NOT NULL
 SET r.date = Date(Datetime({epochSeconds: apoc.date.parse(row6.`Date Proprietor Added`,'s','dd-MM-yyyy')}));
-CREATE INDEX ON :Company(incorporationDate);
+CREATE INDEX CompanyIndex FOR (n:Company) ON (n.incorporationDate);
 
 CALL db.schema.visualization();
