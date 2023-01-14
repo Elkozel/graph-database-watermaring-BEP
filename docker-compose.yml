@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  neo4j:
+    image: neo4j
+    container_name: "Neo4j_Database"
+    ports:
+    - "7474:7474"
+    - "7687:7687"
+    environment:
+    - NEO4J_ACCEPT_LICENSE_AGREEMENT=yes 
+    - NEO4J_AUTH=neo4j/test_password
+    - NEO4JLABS_PLUGINS=["apoc", "graph-data-science"]
+    - apoc.import.file.enabled=truea
