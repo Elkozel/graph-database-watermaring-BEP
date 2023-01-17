@@ -63,8 +63,8 @@ def create_relation(link, source_id: int, dest_id: int, edge_type: str, visible:
 
     # Create the relation
     result = link.run("match (dest), (source) "
-        "where id(source) = $source_id and id(dest) = $dest_id"
-        "create (source)-[r:{type}]->(dest)"
+        "where id(source) = $source_id and id(dest) = $dest_id "
+        "create (source)-[r:{type}]->(dest) "
         "return id(r)".format(type=edge_type), 
         source_id=source_id, dest_id=dest_id)
     return result.single()[0]
