@@ -13,14 +13,29 @@ def embed_watermark(document, key: int, identity: str, field: str, fields: List[
     :param str field the field, into which the watermark will be embedded
     :param List[str] fields the fields, which will be used to generate the watermark
     """
-    concatinated_fields = [document[field] for field in fields]
-    watermark = hash(identity + concatinated_fields + b64encode(key)) % 11706361
+    concatinated_fields = [str(document[field]) for field in fields]
+    watermark = hash(identity + "".join(concatinated_fields) + str(key)) % 11706361
     document[field] = watermark
     return watermark
 
+def detect_watermark(document, key: int, identity: str, field: str, fields: List[str]):
+    """
+    Detect if a watermark is present inside the document
+
+    :param document the document, where the watermark should be embedded
+    :param str key the key used for the embedding process
+    :param str indetity the indetity, which the watermark will carry
+    :param str field the field, into which the watermark will be embedded
+    :param List[str] fields the fields, which will be used to generate the watermark
+    """
+    concatinated_fields = [str(document[field]) for field in fields]
+    watermark = hash(identity + "".join(concatinated_fields) + str(key)) % 11706361
+    return document[field] == watermark
 
 
-def get_random_set(target_sum: int, lower_range: int, upper_range: int, max_tries: int = 50):
+
+
+def get_random_set(target_sum: int, lower_range: int, upper_range: int, max_tries: int):
     """
     Generate a set of random numbers, all summing up to a target sum
 
@@ -31,7 +46,7 @@ def get_random_set(target_sum: int, lower_range: int, upper_range: int, max_trie
     """
     # While the algorithm has not exeeded the maximum tries
     if max_tries <= 0:
-        print("No groups were found satisfying the bounds {upper} and {lower} after {tries} tries"
+        print("No groups were found satisfying the bounds {lower} and {upper} after {tries} tries"
             .format(upper=upper_range, lower=lower_range, tries=max_tries))
         sys.exit(1)
 
