@@ -2,13 +2,13 @@ from random import choice, choices, randint
 from typing import List
 
 
-def create_pseudo_document(link, type: str, fields: List[str], optional_fields: List[str] = []):
+def create_pseudo_document(link, type: str, fields: List[str], optional_fields: List[str]):
     """
     Create a pseudo (fake) document, given the document type and its fields
     
-    :param List[str] fields the fields, which the resulting pseudo document should have
-    :param str type the type of the resulting document
-    :param List[str] optional_fields fields, which are optional and might not be present in the end result
+    :param List[str] fields: the fields, which the resulting pseudo document should have
+    :param str type: the type of the resulting document
+    :param List[str] optional_fields: fields, which are optional and might not be present in the end result
     """
     # For each of the fields
     new_object = {}
