@@ -1,4 +1,4 @@
-
+# Graph Database Watermarker(BEP)
 
 # Install
 To install the project you just need to install all the requirements:
@@ -11,6 +11,9 @@ To run this python script, you need to execute the following shell:
 ```bash
 python ./src/main.py
 ```
+
+# Cite
+Use the intergrated Github system to easily create a citation for this project. If you have no idea what it is, please follow [this link](https://twitter.com/natfriedman/status/1420122675813441540).
 
 # I simply want to see what this does
 

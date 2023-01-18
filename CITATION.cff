@@ -1,0 +1,24 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: Graph Database Watermarker(BEP)
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Tsvetomir
+    family-names: Hristov
+    email: caci802@gmail.com
+repository-code: 'https://github.com/Elkozel/graph-database-watermaring-BEP'
+abstract: >-
+  The algorithm watermarks a graph database by inserting
+  fake documents, which then act as a cover for the
+  watermark.
+keywords:
+  - watermarking
+  - graph database
+  - neo4j
+  - digital watermarking
+license: MIT
