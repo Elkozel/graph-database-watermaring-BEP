@@ -7,7 +7,9 @@ import inquirer
 import database as db
 import pseudo as ps
 import watermark as wk
+import attack
 import fake
+import argparse
 
 # Load Environment Variables
 load_dotenv()
@@ -15,6 +17,11 @@ load_dotenv()
 # CONSTANTS
 URI = os.getenv("DB_URL")
 AUTH = (os.getenv("DB_USER"), os.getenv("DB_PASSWORD"))
+RELATIONS = {
+    "Recipient": {"type": "DONATED", "dir": "out"},
+    "Property": {"type": "OWNS", "dir": "out"},
+    "Person": {"type": "HAS_CONTROL", "dir": "in"}
+}
 
 
 def watermark_database(session,
@@ -62,28 +69,31 @@ def watermark_database(session,
         wk.embed_watermark(pseudo_document, key=watermark_key, identity=watermark_identity,
                            field=watermark_cover_field, fields=watermarked_document_fields)
         # Insert the pseudo documents inside the database
-        document_ids.append(session.execute_write(db.add_document,
-                              document=pseudo_document,
-                              connections=group,
-                              randomized_directions=watermark_edge_direction_randomized,
-                              visible=watermark_visibility,
-                              document_type=watermarked_document_type))
+        pseudo_node = session.execute_write(db.create_node,
+            document=pseudo_document,
+            visible=watermark_visibility,
+            node_type=watermarked_document_type
+        )
+            
+        document_ids.append(pseudo_node)
+        # Create relations
+        for (node, label) in group:
+            relation = RELATIONS[label]
+            session.execute_write(db.create_relation,
+                source_id=pseudo_node,
+                dest_id=node,
+                edge_type=relation["type"],
+                reversed=(relation["dir"] == "in"),
+                visible=watermark_visibility
+            )
     return document_ids
 
 
 def get_all_company_ids(link):
     result = link.run("match (n)"
                       "where not \"Company\" in labels(n)"
-                      "return id(n)")
-    return result.value()
-
-def fetch_documents(link, documents: List[int]):
-    id_arr = ", ".join([str(id) for id in documents])
-    result = link.run("match (n)"
-                      "where ID(n) in [{ids}]"
-                      "return n".format(ids=id_arr))
-    return result.value()
-
+                      "return id(n), labels(n)[0]")
+    return result.values()
 
 def watermark_uk_companies(session):
     """
@@ -108,14 +118,12 @@ def watermark_uk_companies(session):
     
 
 def verify_watermark(session, watermarked_ids: List[int], key: int, watermark_identity: str, watermark_fields: List[str], watermark_cover_field: str, fast_check: bool = True):
-    documents = session.execute_read(fetch_documents, documents=watermarked_ids)
+    documents = session.execute_read(db.get_documents, ids=watermarked_ids)
     for document in documents:
         result = wk.detect_watermark(document, key=key, identity=watermark_identity, field=watermark_cover_field, fields=watermark_fields)
         if result:
             return True
     return False
-
-
 
 
 # MAIN MENU
@@ -131,6 +139,7 @@ if __name__ == "__main__":
     with GraphDatabase.driver(URI, auth=AUTH) as driver:
         # Verify connection to the database
         driver.verify_connectivity()
+        
         while True:
             # Present the user with the main menu
             answer = inquirer.prompt(main_menu)
@@ -140,7 +149,7 @@ if __name__ == "__main__":
                         watermark_uk_companies(session)
                 case "Populate database":
                     with driver.session(database="neo4j") as session:
-                        db.populate_fake_data(session)
+                        fake.populate_fake_data(session)
                 case "Reset --hard":
                     with driver.session(database="neo4j") as session:
                         db.delete_everythong(session)
