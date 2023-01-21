@@ -125,7 +125,13 @@ def verify_watermark(session, watermarked_ids: List[int], key: int, watermark_id
             return True
     return False
 
+parser = argparse.ArgumentParser(description='Watermark a Neo4j database')
+parser.add_argument("-w", '--watermark', action='store_true', help='Watermark UK database without asking')
+# parser.add_argument('--reset', metavar='N', type=int,
+#                     help='Watermark UK database')
 
+args = parser.parse_args()
+print(args.watermark)
 # MAIN MENU
 main_menu = [
     inquirer.List('Main menu',
