@@ -73,6 +73,43 @@ def get_all_ids(link):
     result = link.run("match (n) return id(n)")
     return result.value()
 
+def get_all_ids_with_labels(link):
+    result = link.run("match (n) return id(n), labels(n)[0]")
+    return result.value()
+
+def get_document(link, id):
+    return link.run("match (m) "
+        "where id(m) = $id "
+        "return m", id = id
+    ).single()
+
+def get_documents(link, ids):
+    return link.run("match (m)"
+        "where id(m) in $ids"
+        "return m", ids=ids
+    ).value()
+
+def dublicate_documents(link, ids):
+    return link.run("match (n)"
+    "where id(n) in $ids"
+    "with collect(n) AS c_nodes"
+    "call apoc.refactor.cloneNodes(c_nodes)"
+    "YIELD input, output"
+    "Return id(output)", ids=ids
+    )
+
+def delete_document(link, id):
+    result = link.run("match (m)-[r]-() "
+        "where id(m) = $id "
+        "delete r, m", id=id
+    )
+
+def delete_documents(link, ids):
+    result = link.run("match (m)-[r]-() "
+        "where id(m) in $ids "
+        "delete r, m", ids=ids
+    )
+
 def delete_everythong(link):
     link.run("match (m)-[r]-(n) delete r, m, n")
     link.run("match (m) delete m")

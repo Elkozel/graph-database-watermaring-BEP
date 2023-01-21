@@ -33,8 +33,6 @@ def detect_watermark(document, key: int, identity: str, field: str, fields: List
     return document[field] == watermark
 
 
-
-
 def get_random_set(target_sum: int, lower_range: int, upper_range: int, max_tries: int):
     """
     Generate a set of random numbers, all summing up to a target sum
