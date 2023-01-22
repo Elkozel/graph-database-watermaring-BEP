@@ -1,16 +1,36 @@
 import database as db
 import pseudo as ps
 from random import choices, choice, randint
+from main import resultLog
+import logging
+import json
 
-def deletion_attack(session, step):
+def deletion_attack(session, step, verification):
     """
     Perform a deletion attack on the database
 
     :param step: the amount of documents that need to be deleted
+    :param verification: the function used for verification of the watermark
     """
-    id_to_delete = choices(session.execute_read(db.get_all_ids), k=step)
-
-    session.execute_write(db.delete_documents, ids=id_to_delete)
+    logging.debug("Deletion attack started with step {step}".format(step=step))
+    nodes_before = session.execute_read(db.all_ids_count)
+    iteration = 0
+    while True:
+        if not verification():
+            break
+        id_to_delete = choices(session.execute_read(db.get_all_ids), k=step)
+        session.execute_write(db.delete_documents, ids=id_to_delete)
+        iteration += 1
+    nodes_after = session.execute_read(db.all_ids_count)
+    attack_summary = {
+        "action": "modification_attack",
+        "iteration": iteration,
+        "step": step,
+        "nodes_before": nodes_before,
+        "nodes_after": nodes_after
+    }
+    resultLog.write(json.dumps(attack_summary))
+    return iteration
 
 def insertion_attack(session, step, connections_min=0, connections_max=20):
     """

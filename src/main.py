@@ -16,7 +16,7 @@ import logging
 
 # Configure logger
 resultLog = open("log/results.json", 'a')
-logging.basicConfig(filename='basic.log', encoding='utf-8', level=logging.DEBUG)
+logging.basicConfig(filename='log/basic.log', encoding='utf-8', level=logging.DEBUG)
 
 # Load Environment Variables
 load_dotenv()
@@ -24,7 +24,7 @@ load_dotenv()
 settings = {}
 with open("settings.json") as settingsFile:
     settings = json.load(settingsFile)
-logging.debug("Settings loaded: {settings}".format(settings=json.dumps()))
+logging.debug("Settings loaded: {settings}".format(settings=json.dumps(settings)))
 
 # CONSTANTS
 URI = os.getenv("DB_URL")
@@ -80,20 +80,22 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
                                         watermark_identity=watermark_identity,
                                         watermark_visibility=watermark_visibility)
     end_time = time.time()
-    performance = {
+    log_result = {
+        "action": "watermark",
         "duration": end_time-start_time,
         "number_company_ids": len(all_company_ids),
         "number_non_company_ids": len(all_non_company_ids),
         "number_nodes_before": id_count,
         "documents_introduced": len(watermarked)
     }
-    resultLog.write(json.loads(performance))
+    resultLog.write(json.dumps(log_result))
     logging.debug("Database was watermarked in {time} seconds".format(time=end_time-start_time))
     logging.info("{number} pseudo nodes introduced".format(number=sum(len(watermarked))))
     return [watermarked, []]
 
 
 def verify_uk_companies(session, watermarked_ids: tuple[List[int], List[int]], key: int, watermark_identity: str, fast_check: bool = True):
+    start_time = time.time()
     result = verify_watermark(
         session=session,
         watermarked_ids=watermarked_ids[0],
@@ -104,6 +106,13 @@ def verify_uk_companies(session, watermarked_ids: tuple[List[int], List[int]], k
         watermark_cover_field="companyNumber",
         fast_check=fast_check
     )
+    end_time = time.time()
+    log_result = {
+        "action": "verify",
+        "duration": end_time-start_time,
+        "result": result
+    }
+    resultLog.write(json.dumps(log_result))
     logging.info("Watermark verification with result {result}".format(result=result))
     return result
 
@@ -130,7 +139,7 @@ parser.add_argument('--verify', action='store_true',
 #                     help='Watermark UK database')
 
 args = parser.parse_args()
-print(args.watermark)
+logging.debug("Process started with args: {args}".format(args=args))
 # MAIN MENU
 main_menu = [
     inquirer.List('Main menu',
@@ -153,7 +162,7 @@ def show_menu():
             with driver.session(database="neo4j") as session:
                 res = verify_uk_companies(
                     session, ids, settings["key"], settings["watermark_identity"])
-                print(res)
+                println("Watermark verification: {result}".format(result=res))
         case "Populate database":
             with driver.session(database="neo4j") as session:
                 fake.populate_fake_data(session)
@@ -182,7 +191,6 @@ if __name__ == "__main__":
         with driver.session(database="neo4j") as session:
             res = verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
-            print(res)
     else:
         while True:
             show_menu()
