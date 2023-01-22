@@ -1,6 +1,7 @@
 from typing import List
 from random import choice
 
+
 def add_document(link, document: dict, connections: List[int], document_type: str, reversed_direction: bool = False, randomized_directions: bool = False, visible: bool = False):
     """
     Add a document to the database
@@ -14,16 +15,19 @@ def add_document(link, document: dict, connections: List[int], document_type: st
     """
 
     # Create the node
-    source_id = create_node(link, document=document, visible=visible, node_type=document_type)
+    source_id = create_node(link, document=document,
+                            visible=visible, node_type=document_type)
     # Create all the edges from the newly created node to the connection nodes
     for connection in connections:
         if randomized_directions:
-            result = create_relation(link, source_id, connection, edge_type="Watermark",visible=visible, reversed = choice([True, False]))
+            result = create_relation(link, source_id, connection, edge_type="Watermark",
+                                     visible=visible, reversed=choice([True, False]))
         else:
-            result = create_relation(link, source_id, connection, edge_type="Watermark" ,visible=visible, reversed=reversed_direction)
+            result = create_relation(
+                link, source_id, connection, edge_type="Watermark", visible=visible, reversed=reversed_direction)
     return source_id
-            
-    
+
+
 def create_node(link, document: dict, node_type: str, visible: bool = False):
     """
     Creates a node inside the database and returns its ID
@@ -37,10 +41,13 @@ def create_node(link, document: dict, node_type: str, visible: bool = False):
     if visible:
         node_type += "W"
     # Insert the node inside the database
-    fields = ["{name}: $document.{field}".format(name=key, field=key) for key in document.keys()]
-    query = "create (n:"+ node_type +" {" + ', '.join(fields) +"}) return id(n)"
+    fields = ["{name}: $document.{field}".format(
+        name=key, field=key) for key in document.keys()]
+    query = "create (n:" + node_type + \
+        " {" + ', '.join(fields) + "}) return id(n)"
     result = link.run(query, document=document)
     return result.single()[0]
+
 
 def create_relation(link, source_id: int, dest_id: int, edge_type: str, visible: bool = False, reversed: bool = False) -> int:
     """
@@ -63,52 +70,64 @@ def create_relation(link, source_id: int, dest_id: int, edge_type: str, visible:
 
     # Create the relation
     result = link.run("match (dest), (source) "
-        "where id(source) = $source_id and id(dest) = $dest_id "
-        "create (source)-[r:{type}]->(dest) "
-        "return id(r)".format(type=edge_type), 
-        source_id=source_id, dest_id=dest_id)
+                      "where id(source) = $source_id and id(dest) = $dest_id "
+                      "create (source)-[r:{type}]->(dest) "
+                      "return id(r)".format(type=edge_type),
+                      source_id=source_id, dest_id=dest_id)
     return result.single()[0]
+
+def all_ids_count(link):
+    result = link.run("match (n) return count(n)")
+    return result
+
 
 def get_all_ids(link):
     result = link.run("match (n) return id(n)")
     return result.value()
 
+
 def get_all_ids_with_labels(link):
     result = link.run("match (n) return id(n), labels(n)[0]")
     return result.value()
 
+
 def get_document(link, id):
     return link.run("match (m) "
-        "where id(m) = $id "
-        "return m", id = id
-    ).single()
+                    "where id(m) = $id "
+                    "return m", id=id
+                    ).single()
+
 
 def get_documents(link, ids):
-    return link.run("match (m)"
-        "where id(m) in $ids"
-        "return m", ids=ids
-    ).value()
+    return link.run("match (m) "
+                    "where id(m) in $ids "
+                    "return m", ids=ids
+                    ).value()
+
 
 def dublicate_documents(link, ids):
     return link.run("match (n)"
-    "where id(n) in $ids"
-    "with collect(n) AS c_nodes"
-    "call apoc.refactor.cloneNodes(c_nodes)"
-    "YIELD input, output"
-    "Return id(output)", ids=ids
-    )
+                    "where id(n) in $ids"
+                    "with collect(n) AS c_nodes"
+                    "call apoc.refactor.cloneNodes(c_nodes)"
+                    "YIELD input, output"
+                    "Return id(output)", ids=ids
+                    )
+
 
 def delete_document(link, id):
     result = link.run("match (m)-[r]-() "
-        "where id(m) = $id "
-        "delete r, m", id=id
-    )
+                      "where id(m) = $id "
+                      "delete r, m", id=id
+                      )
+
 
 def delete_documents(link, ids):
     result = link.run("match (m)-[r]-() "
-        "where id(m) in $ids "
-        "delete r, m", ids=ids
-    )
+                      "where id(m) in $ids "
+                      "delete r, m", ids=ids
+                      )
+
 
 def delete_everythong(link):
     link.run("match (m)-[r]-(n) delete r, m, n")

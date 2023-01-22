@@ -8,121 +8,109 @@ import database as db
 import pseudo as ps
 import watermark as wk
 import attack
+import time
+import json
 import fake
 import argparse
+import logging
+
+# Configure logger
+resultLog = open("log/results.json", 'a')
+logging.basicConfig(filename='basic.log', encoding='utf-8', level=logging.DEBUG)
 
 # Load Environment Variables
 load_dotenv()
+# Load settings
+settings = {}
+with open("settings.json") as settingsFile:
+    settings = json.load(settingsFile)
+logging.debug("Settings loaded: {settings}".format(settings=json.dumps()))
 
 # CONSTANTS
 URI = os.getenv("DB_URL")
 AUTH = (os.getenv("DB_USER"), os.getenv("DB_PASSWORD"))
-RELATIONS = {
-    "Recipient": {"type": "DONATED", "dir": "out"},
-    "Property": {"type": "OWNS", "dir": "out"},
-    "Person": {"type": "HAS_CONTROL", "dir": "in"}
-}
+ids = []
 
 
-def watermark_database(session,
-                       ids: List[int],
-                       min_group_size: int,
-                       max_group_size: int,
-                       watermarked_document_type: str,
-                       watermark_cover_field: str,
-                       watermarked_document_fields: List[str],
-                       watermark_key: int,
-                       group_find_max_tries: int = 50,
-                       watermarked_document_optional_fields: List[str] = [],
-                       watermark_identity: str = "",
-                       watermark_edge_direction_randomized: bool = False,
-                       watermark_visibility: bool = False):
-    """
-    Watermarks a database
-
-    :param ids: The ids of the documents, which need to be watermarked
-    :param min_group_size: The minimum size of each group
-    :param max_group_size: The maximum size of each group
-    :param watermarked_document_type: The type of the document, which contains the watermark
-    :param watermark_cover_field: The name of the field, which contains the watermark
-    :param watermarked_document_fields: The fields, which are included inside the watermarked document
-    :param watermarked_document_optional_fields: The fielDs, which are optionally included inside the watermarked document
-    :param watermark_key: The private key for the watermark
-    :param group_find_max_tries: The amount of tries it will take for the algorithm to give up on partitioning groups
-    :param watermark_identity: An optional identity for the watermark, this can be the name of the person the information was leased or any other identifiable string
-    :param watermark_edge_direction_randomized: If the edge direction should be randomized. If true, the algorithm will treat the graph as undirected and not take the direction of the edges into account when creating the watermark.
-    :param watermark_visibility: Optional. If selected, the letter W will be added on  the back of the type of the watermark document and edges, indicating that it is watermarked.
-    """
-    # Determine the size of each group
-    group_sizes = wk.get_random_set(
-        len(ids), min_group_size, max_group_size, group_find_max_tries)
-    # Pick the groups, based on the predetermined size
-    groups = wk.divide_groups(ids, group_sizes)
-    # Generate pseudo document for each group
-    document_ids = []
-    for group in groups:
-        pseudo_document = session.execute_read(
-            ps.create_pseudo_document,
-            type=watermarked_document_type,
-            fields=watermarked_document_fields,
-            optional_fields=watermarked_document_optional_fields)
-        # Embed watermark in each pseudo document
-        wk.embed_watermark(pseudo_document, key=watermark_key, identity=watermark_identity,
-                           field=watermark_cover_field, fields=watermarked_document_fields)
-        # Insert the pseudo documents inside the database
-        pseudo_node = session.execute_write(db.create_node,
-                                            document=pseudo_document,
-                                            visible=watermark_visibility,
-                                            node_type=watermarked_document_type
-                                            )
-
-        document_ids.append(pseudo_node)
-        # Create relations
-        for (node, label) in group:
-            relation = RELATIONS[label]
-            session.execute_write(db.create_relation,
-                                  source_id=pseudo_node,
-                                  dest_id=node,
-                                  edge_type=relation["type"],
-                                  reversed=(relation["dir"] == "in"),
-                                  visible=watermark_visibility
-                                  )
-    return document_ids
-
-
-def get_all_company_ids(link):
+def get_all_non_company_ids(link):
     result = link.run("match (n)"
                       "where not \"Company\" in labels(n)"
                       "return id(n), labels(n)[0]")
     return result.values()
 
 
-def watermark_uk_companies(session):
+def get_all_company_ids(link):
+    result = link.run("match (n:Company)"
+                      "return id(n), labels(n)[0]")
+    return result.values()
+
+
+def get_visible_watermark_ids(link):
+    result1 = link.run("match (n:CompanyW) "
+                       "return id(n)")
+    result2 = link.run("match (n:PropertyW) "
+                       "return id(n)")
+    return [result1.value(), result2.value()]
+
+
+def watermark_uk_companies(session, watermark_key: int, watermark_identity: str, watermark_visibility: bool = False):
     """
     Watermark the UK companies database
 
     :param session: the session for connection to the database
     """
     # Retrieve all IDs from the database
-    all_ids = session.execute_read(get_all_company_ids)
-    watermarked = watermark_database(session,
-                                     ids=all_ids,
-                                     min_group_size=10,
-                                     max_group_size=1000,
-                                     watermarked_document_type="Company",
-                                     watermark_cover_field="companyNumber",
-                                     watermarked_document_fields=[
-                                         "countryOfOrigin", "name", "status"],
-                                     watermarked_document_optional_fields=[
-                                         "mortgagesOutstanding", "SIC", "category"],
-                                     watermark_key=1,
-                                     watermark_identity="RP Project",
-                                     watermark_visibility=True)
-    return watermarked
+    logging.debug("Watermarking UK Companies dataset")
+    id_count = session.execute_read(db.all_ids_count)
+    all_company_ids = session.execute_read(get_all_company_ids)
+    all_non_company_ids = session.execute_read(get_all_non_company_ids)
+    logging.debug("Fetching all document ids: Done")
+    start_time = time.time()
+    watermarked = wk.watermark_database(session,
+                                        ids=all_company_ids,
+                                        min_group_size=10,
+                                        max_group_size=1000,
+                                        watermarked_document_type="Company",
+                                        watermark_cover_field="companyNumber",
+                                        watermarked_document_fields=[
+                                            "countryOfOrigin", "name", "status"],
+                                        watermarked_document_optional_fields=[
+                                            "mortgagesOutstanding", "SIC", "category"],
+                                        watermark_key=watermark_key,
+                                        watermark_identity=watermark_identity,
+                                        watermark_visibility=watermark_visibility)
+    end_time = time.time()
+    performance = {
+        "duration": end_time-start_time,
+        "number_company_ids": len(all_company_ids),
+        "number_non_company_ids": len(all_non_company_ids),
+        "number_nodes_before": id_count,
+        "documents_introduced": len(watermarked)
+    }
+    resultLog.write(json.loads(performance))
+    logging.debug("Database was watermarked in {time} seconds".format(time=end_time-start_time))
+    logging.info("{number} pseudo nodes introduced".format(number=sum(len(watermarked))))
+    return [watermarked, []]
+
+
+def verify_uk_companies(session, watermarked_ids: tuple[List[int], List[int]], key: int, watermark_identity: str, fast_check: bool = True):
+    result = verify_watermark(
+        session=session,
+        watermarked_ids=watermarked_ids[0],
+        key=key,
+        watermark_identity=watermark_identity,
+        watermark_fields=[
+            "countryOfOrigin", "name", "status"],
+        watermark_cover_field="companyNumber",
+        fast_check=fast_check
+    )
+    logging.info("Watermark verification with result {result}".format(result=result))
+    return result
 
 
 def verify_watermark(session, watermarked_ids: List[int], key: int, watermark_identity: str, watermark_fields: List[str], watermark_cover_field: str, fast_check: bool = True):
     documents = session.execute_read(db.get_documents, ids=watermarked_ids)
+    logging.debug("Verifying {number} documents for watermark".format(number=len(documents)))
     for document in documents:
         result = wk.detect_watermark(document, key=key, identity=watermark_identity,
                                      field=watermark_cover_field, fields=watermark_fields)
@@ -159,10 +147,13 @@ def show_menu():
     match answer["Main menu"]:
         case "Watermark UK database":
             with driver.session(database="neo4j") as session:
-                watermark_uk_companies(session)
+                watermark_uk_companies(
+                    session, settings["key"], settings["watermark_identity"], settings["watermark_visible"])
         case "Verify watermark":
             with driver.session(database="neo4j") as session:
-                verify_watermark(session, [], 1, "", [], "")
+                res = verify_uk_companies(
+                    session, ids, settings["key"], settings["watermark_identity"])
+                print(res)
         case "Populate database":
             with driver.session(database="neo4j") as session:
                 fake.populate_fake_data(session)
@@ -178,12 +169,20 @@ if __name__ == "__main__":
         # Verify connection to the database
         driver.verify_connectivity()
 
-        if args.interactive:
-            while True:
-                show_menu()
-        elif args.watermark:
-            with driver.session(database="neo4j") as session:
-                watermark_uk_companies(session)
-        elif args.verify:
-            with driver.session(database="neo4j") as session:
-                verify_watermark(session)
+    with driver.session(database="neo4j") as session:
+        ids = session.execute_read(get_visible_watermark_ids)
+
+    if args.interactive:
+        while True:
+            show_menu()
+    elif args.watermark:
+        with driver.session(database="neo4j") as session:
+            ids = watermark_uk_companies(session)
+    elif args.verify:
+        with driver.session(database="neo4j") as session:
+            res = verify_uk_companies(
+                session, ids, settings["key"], settings["watermark_identity"])
+            print(res)
+    else:
+        while True:
+            show_menu()

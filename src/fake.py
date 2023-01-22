@@ -3,7 +3,6 @@ from random import randrange, choices
 import database as db
 import pseudo as ps
 import watermark as wk
-from main import watermark_database
 
 
 def populate_fake_data(session, records: int = 25, relations:int = randrange(10)):
@@ -40,4 +39,4 @@ def watermark_fake_database(session):
     """
     # Create groups
     all_ids = session.execute_read(db.get_all_ids)
-    watermark_database(session, all_ids, 3, 12, "Person", "Salary", ["First_Name", "Last_Name", "Age"], 1, watermark_visibility=True)
+    wk.watermark_database(session, all_ids, 3, 12, "Person", "Salary", ["First_Name", "Last_Name", "Age"], 1, watermark_visibility=True)

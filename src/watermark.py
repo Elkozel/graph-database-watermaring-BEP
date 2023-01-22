@@ -1,6 +1,7 @@
 from typing import Any, List
 from random import randint, randrange
-from base64 import b64encode
+import database as db
+import pseudo as ps
 import sys
 
 def embed_watermark(document, key: int, identity: str, field: str, fields: List[str]):
@@ -81,3 +82,76 @@ def divide_groups(group: List[Any], group_sizes: List[int]):
         new_groups.append(new_group)
 
     return new_groups
+
+
+RELATIONS = {
+    "Recipient": {"type": "DONATED", "dir": "out"},
+    "Property": {"type": "OWNS", "dir": "out"},
+    "Person": {"type": "HAS_CONTROL", "dir": "in"},
+    "Company": {"type": "HAS_CONTROL", "dir": "out"}
+}
+
+def watermark_database(session,
+                       ids: List[int],
+                       min_group_size: int,
+                       max_group_size: int,
+                       watermarked_document_type: str,
+                       watermark_cover_field: str,
+                       watermarked_document_fields: List[str],
+                       watermark_key: int,
+                       group_find_max_tries: int = 50,
+                       watermarked_document_optional_fields: List[str] = [],
+                       watermark_identity: str = "",
+                       watermark_edge_direction_randomized: bool = False,
+                       watermark_visibility: bool = False):
+    """
+    Watermarks a database
+
+    :param ids: The ids of the documents, which need to be watermarked
+    :param min_group_size: The minimum size of each group
+    :param max_group_size: The maximum size of each group
+    :param watermarked_document_type: The type of the document, which contains the watermark
+    :param watermark_cover_field: The name of the field, which contains the watermark
+    :param watermarked_document_fields: The fields, which are included inside the watermarked document
+    :param watermarked_document_optional_fields: The fielDs, which are optionally included inside the watermarked document
+    :param watermark_key: The private key for the watermark
+    :param group_find_max_tries: The amount of tries it will take for the algorithm to give up on partitioning groups
+    :param watermark_identity: An optional identity for the watermark, this can be the name of the person the information was leased or any other identifiable string
+    :param watermark_edge_direction_randomized: If the edge direction should be randomized. If true, the algorithm will treat the graph as undirected and not take the direction of the edges into account when creating the watermark.
+    :param watermark_visibility: Optional. If selected, the letter W will be added on  the back of the type of the watermark document and edges, indicating that it is watermarked.
+    """
+    # Determine the size of each group
+    group_sizes = get_random_set(
+        len(ids), min_group_size, max_group_size, group_find_max_tries)
+    # Pick the groups, based on the predetermined size
+    groups = divide_groups(ids, group_sizes)
+    # Generate pseudo document for each group
+    document_ids = []
+    for group in groups:
+        pseudo_document = session.execute_read(
+            ps.create_pseudo_document,
+            type=watermarked_document_type,
+            fields=watermarked_document_fields,
+            optional_fields=watermarked_document_optional_fields)
+        # Embed watermark in each pseudo document
+        embed_watermark(pseudo_document, key=watermark_key, identity=watermark_identity,
+                           field=watermark_cover_field, fields=watermarked_document_fields)
+        # Insert the pseudo documents inside the database
+        pseudo_node = session.execute_write(db.create_node,
+                                            document=pseudo_document,
+                                            visible=watermark_visibility,
+                                            node_type=watermarked_document_type
+                                            )
+
+        document_ids.append(pseudo_node)
+        # Create relations
+        for (node, label) in group:
+            relation = RELATIONS[label]
+            session.execute_write(db.create_relation,
+                                  source_id=pseudo_node,
+                                  dest_id=node,
+                                  edge_type=relation["type"],
+                                  reversed=(relation["dir"] == "in"),
+                                  visible=watermark_visibility
+                                  )
+    return document_ids

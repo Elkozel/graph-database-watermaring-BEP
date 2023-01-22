@@ -1,0 +1,17 @@
+{
+    "key": 1,
+    "watermark_identity": "RP Project",
+    "watermarkFields": [
+        "countryOfOrigin",
+        "name",
+        "status"
+    ],
+    "watermarkFields_optional": [
+        "mortgagesOutstanding",
+        "SIC",
+        "category"
+    ],
+    "watermarkCoverField": "companyNumber",
+    "watermarkDocumentType": "Company",
+    "watermark_visible": true
+}
