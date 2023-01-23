@@ -20,7 +20,7 @@ def populate_fake_data(session, records: int = 25, relations:int = randrange(10)
             "Last_Name": names.get_last_name(),
             "Age": randrange(85)
         }
-        arr.append(session.execute_write(db.create_node, document=doc))
+        arr.append(session.execute_write(db.create_node, document=doc, node_type="Person"))
     for s in arr:
         # generate a random array of nodes, to which the pseudo document will be connected
         connections = list(set(choices(range(records), k=relations)))

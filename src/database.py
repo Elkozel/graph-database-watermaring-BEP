@@ -78,7 +78,7 @@ def create_relation(link, source_id: int, dest_id: int, edge_type: str, visible:
 
 def all_ids_count(link):
     result = link.run("match (n) return count(n)")
-    return result
+    return result.single()[0]
 
 
 def get_all_ids(link):

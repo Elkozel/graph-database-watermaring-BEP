@@ -1,5 +1,6 @@
 from typing import Any, List
 from random import randint, randrange
+import hashlib
 import database as db
 import pseudo as ps
 import sys
@@ -15,7 +16,9 @@ def embed_watermark(document, key: int, identity: str, field: str, fields: List[
     :param List[str] fields the fields, which will be used to generate the watermark
     """
     concatinated_fields = [str(document[field]) for field in fields]
-    watermark = hash(identity + "".join(concatinated_fields) + str(key)) % 11706361
+    watermark_string = identity + "".join(concatinated_fields) + str(key)
+    watermark_hash = hashlib.sha256(watermark_string.encode('utf-8'))
+    watermark = int.from_bytes(watermark_hash.digest(), 'big') % 11706361
     document[field] = watermark
     return watermark
 
@@ -30,7 +33,9 @@ def detect_watermark(document, key: int, identity: str, field: str, fields: List
     :param List[str] fields the fields, which will be used to generate the watermark
     """
     concatinated_fields = [str(document[field]) for field in fields]
-    watermark = hash(identity + "".join(concatinated_fields) + str(key)) % 11706361
+    watermark_string = identity + "".join(concatinated_fields) + str(key)
+    watermark_hash = hashlib.sha256(watermark_string.encode('utf-8'))
+    watermark = int.from_bytes(watermark_hash.digest(), 'big') % 11706361
     return document[field] == watermark
 
 
