@@ -9,7 +9,7 @@ pip install -r requirements.txt
 # Run
 To run this python script, you need to execute the following shell:
 ```bash
-python ./src/main.py
+python ./src/main.py --interactive
 ```
 
 # Cite
@@ -17,30 +17,11 @@ Use the intergrated Github system to easily create a citation for this project. 
 
 # I simply want to see what this does
 
-## 1. Install Neo4j
-
-### Install in docker
-To install the neo4j docker image, simply follow the [following guide](https://neo4j.com/developer/docker-run-neo4j/) or run:
+## 1. Run the setup script
 ```bash
-docker run -p7474:7474 -p7687:7687 -p7473:7473 -d --env NEO4J_AUTH=neo4j/test_password --env 'NEO4JLABS_PLUGINS=["apoc"]' --name Neo4j neo4j:latest
+chmod +x setup.sh
+./setup.sh
 ```
-
-### Install normally 
-Follow [this guide](https://neo4j.com/docs/operations-manual/current/installation/windows/)
-
-## 2. Install this project
-```bash
-pip install -r requirements.txt
-```
-
-## 3. Modify the .env file (if needed)
-Usually, after installing the database, you should configure the credentials for access, however for the docker container they are already prefilled
-
-## 4. Run the python script
-```bash
-python .\src\main.py
-```
-then, choose option `Populate database` to insert fake data inside the database and then `Watermark database` to actually insert the watermark.
 
 # I want to install it myself
 
