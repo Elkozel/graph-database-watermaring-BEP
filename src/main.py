@@ -16,12 +16,13 @@ import logging
 import random
 
 # Configure logger
-if not os.path.exists("/log/rp"):
-    os.makedirs("/log/rp")
-resultLog = open("/log/rp/results.json", 'a')
+log_dir = "/log/rp"
+if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+resultLog = open(os.path.join(log_dir, "results.json"), 'a')
 logging.basicConfig(
                     handlers=[
-                        logging.FileHandler("/log/rp/basic.log"),
+                        logging.FileHandler(os.path.join(log_dir, "basic.log")),
                         logging.StreamHandler()
                     ],
                     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -125,15 +126,8 @@ def verify_uk_companies(session, watermarked_ids: tuple[List[int], List[int]], k
         fast_check=fast_check
     )
     end_time = time.time()
-    log_result = {
-        "action": "verify",
-        "timestamp": time.time(),
-        "duration": end_time-start_time,
-        "result": result
-    }
-    resultLog.write(json.dumps(log_result) + "\n")
-    logging.info(
-        "Watermark verification with result {result}".format(result=result))
+    # logging.info(
+    #     "Watermark verification with result {result} (duration: {duration})".format(result=result, duration=end_time-start_time))
     return result
 
 
@@ -234,6 +228,6 @@ if __name__ == "__main__":
             def verification(session): return verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
-                session, 50, verification)
+                session, 3, verification)
 
 resultLog.close()

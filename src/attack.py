@@ -16,11 +16,19 @@ def deletion_attack(session, step, verify):
     nodes_before = session.execute_read(db.all_ids_count)
     nodes_watermarked = session.execute_read(get_visible_watermark_ids)
     iteration = 0
+    all_ids = session.execute_read(db.get_all_ids)
     while True:
         if not verify(session):
             break
-        id_to_delete = choices(session.execute_read(db.get_all_ids), k=step)
-        session.execute_write(db.delete_documents, ids=id_to_delete)
+        ids_to_delete = []
+        for s in range(step):
+            try:
+                id_to_delete = choice(range(len(all_ids)))
+                ids_to_delete.append(all_ids.pop(id_to_delete))
+            except:
+                iteration += 1
+                break
+        session.execute_write(db.delete_documents, ids=ids_to_delete)
         iteration += 1
     nodes_after = session.execute_read(db.all_ids_count)
     attack_summary = {
@@ -29,9 +37,15 @@ def deletion_attack(session, step, verify):
         "step": step,
         "nodes_before": nodes_before,
         "nodes_after": nodes_after,
+        "nodes_deleted": nodes_before - nodes_after,
         "num_watermarked_nodes": len(nodes_watermarked)
     }
     resultLog.write(json.dumps(attack_summary) + "\n")
+    logging.info("The {action} attack concluded with {deleted_nodes} nodes deleted and {nodes_after} remaining".format(
+        action=attack_summary["action"],
+        deleted_nodes=attack_summary["nodes_deleted"],
+        nodes_after=attack_summary["nodes_after"]
+    ))
     return iteration
 
 def insertion_attack(session, step, connections_min=0, connections_max=20):
