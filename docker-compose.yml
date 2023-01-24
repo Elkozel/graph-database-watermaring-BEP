@@ -26,7 +26,7 @@ services:
       neo4j:
         condition: service_healthy
     volumes:
-      - ./try1/logs:/log/
+      - ./logs:/log/rp/
     environment:
       - DB_URL=neo4j://neo4j:7687
       - DB_USER=neo4j
