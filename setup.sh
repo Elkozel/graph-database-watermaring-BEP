@@ -2,6 +2,9 @@
 echo "Please specify the number of times to run: "
 read runs
 
+echo "Building docker image"
+sudo docker build -t rp/modification .
+
 for (( s=0; s<$runs; s++ ))
 do
     echo "Run $s"
