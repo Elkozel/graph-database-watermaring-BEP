@@ -16,12 +16,12 @@ import logging
 import random
 
 # Configure logger
-if not os.path.exists("log"):
-    os.makedirs("log")
-resultLog = open("log/results.json", 'a')
+if not os.path.exists("/log/rp"):
+    os.makedirs("/log/rp")
+resultLog = open("/log/rp/results.json", 'a')
 logging.basicConfig(
                     handlers=[
-                        logging.FileHandler("log/basic.log"),
+                        logging.FileHandler("/log/rp/basic.log"),
                         logging.StreamHandler()
                     ],
                     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -71,7 +71,7 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
     """
     # Retrieve all IDs from the database
     logging.info("Watermarking UK Companies dataset")
-    min_group_size = random.randint()
+    min_group_size = random.randint(5, min_group_size)
     max_group_size = random.randint(min_group_size, max_group_size)
     id_count = session.execute_read(db.all_ids_count)
     all_company_ids = session.execute_read(get_all_company_ids)
