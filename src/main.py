@@ -13,8 +13,11 @@ import json
 import fake
 import argparse
 import logging
+import random
 
 # Configure logger
+if not os.path.exists("log"):
+    os.makedirs("log")
 resultLog = open("log/results.json", 'a')
 logging.basicConfig(
                     handlers=[
@@ -24,6 +27,7 @@ logging.basicConfig(
                     format="%(asctime)s [%(levelname)s] %(message)s",
                     encoding='utf-8', 
                     level=logging.INFO)
+
 
 # Load Environment Variables
 load_dotenv()
@@ -67,6 +71,8 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
     """
     # Retrieve all IDs from the database
     logging.info("Watermarking UK Companies dataset")
+    min_group_size = random.randint()
+    max_group_size = random.randint(min_group_size, max_group_size)
     id_count = session.execute_read(db.all_ids_count)
     all_company_ids = session.execute_read(get_all_company_ids)
     number_company_ids = len(all_company_ids)
@@ -150,6 +156,8 @@ parser.add_argument("-w", '--watermark', action='store_true',
                     help='Watermark UK database without asking')
 parser.add_argument('--verify', action='store_true',
                     help='Verify the watermark (exit with error if not verified)')
+parser.add_argument('--populate-uk-companies', action='store_true',
+                    help='Populate the database with the UK companies dataset')
 parser.add_argument("-m", '--deletion-attack', action='store_true',
                     help='Perform a deletion attack on a watermarked database')
 
@@ -163,7 +171,7 @@ main_menu = [
     inquirer.List('Main menu',
                   message="What would you like me to do?",
                   choices=["Watermark UK database",
-                           "Verify watermark", "Perform deletion attack", "Populate database", "Reset --hard", "Exit"],
+                           "Verify watermark", "Perform deletion attack", "Populate database", "Populate UK Companies", "Reset --hard", "Exit"],
                   ),
 ]
 
@@ -190,6 +198,9 @@ def show_menu():
         case "Populate database":
             with driver.session(database="neo4j") as session:
                 fake.populate_fake_data(session)
+        case "Populate UK Companies":
+            with driver.session(database="neo4j") as session:
+                db.populate_uk_companies(session)
         case "Reset --hard":
             with driver.session(database="neo4j") as session:
                 db.delete_everythong(session)
@@ -202,26 +213,27 @@ if __name__ == "__main__":
         # Verify connection to the database
         driver.verify_connectivity()
 
-    with driver.session(database="neo4j") as session:
-        ids = session.execute_read(get_visible_watermark_ids)
-
     if args.interactive:
         while True:
             show_menu()
+    if args.populate_uk_companies:
+        with driver.session(database="neo4j") as session:
+            db.populate_uk_companies(session)
     if args.watermark:
         with driver.session(database="neo4j") as session:
             watermark_uk_companies(
                 session, settings["key"], settings["watermark_identity"], settings["watermark_visible"])
     if args.verify:
         with driver.session(database="neo4j") as session:
+            ids = session.execute_read(get_visible_watermark_ids)
             res = verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
     if args.deletion_attack:
         with driver.session(database="neo4j") as session:
+            ids = session.execute_read(get_visible_watermark_ids)
             def verification(session): return verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
                 session, 50, verification)
 
-    while True:
-        show_menu()
+resultLog.close()
