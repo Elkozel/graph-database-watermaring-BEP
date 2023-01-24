@@ -40,7 +40,7 @@ def deletion_attack(session, step, verify):
         "nodes_before": nodes_before,
         "nodes_after": nodes_after,
         "nodes_deleted": nodes_before - nodes_after,
-        "num_watermarked_nodes": len(nodes_watermarked)
+        "num_watermarked_nodes": len(nodes_watermarked[0])
     }
     resultLog.write(json.dumps(attack_summary) + "\n")
     resultLog.flush()
