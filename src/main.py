@@ -106,6 +106,7 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
         "documents_introduced": len(watermarked)
     }
     resultLog.write(json.dumps(log_result) + "\n")
+    resultLog.flush()
     logging.debug("Database was watermarked in {time} seconds".format(
         time=end_time-start_time))
     logging.info("{number} pseudo nodes introduced".format(
