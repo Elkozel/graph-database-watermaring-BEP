@@ -4,6 +4,7 @@ import hashlib
 import database as db
 import pseudo as ps
 import sys
+import logging
 
 def embed_watermark(document, key: int, identity: str, field: str, fields: List[str]):
     """
@@ -132,7 +133,7 @@ def watermark_database(session,
     groups = divide_groups(ids, group_sizes)
     # Generate pseudo document for each group
     document_ids = []
-    for group in groups:
+    for index, group in enumerate(groups):
         pseudo_document = session.execute_read(
             ps.create_pseudo_document,
             type=watermarked_document_type,
@@ -159,4 +160,6 @@ def watermark_database(session,
                                   reversed=(relation["dir"] == "in"),
                                   visible=watermark_visibility
                                   )
+        if index % 10 == 0:
+            logging.info("Watermarked {index}/{total} groups".format(index=index, total=len(groups)))
     return document_ids

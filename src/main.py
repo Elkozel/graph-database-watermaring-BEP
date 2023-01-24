@@ -73,7 +73,7 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
     # Retrieve all IDs from the database
     logging.info("Watermarking UK Companies dataset")
     min_group_size = random.randint(5, min_group_size)
-    max_group_size = random.randint(min_group_size, max_group_size)
+    max_group_size = random.randint(min_group_size+1, max_group_size)
     id_count = session.execute_read(db.all_ids_count)
     all_company_ids = session.execute_read(get_all_company_ids)
     number_company_ids = len(all_company_ids)
@@ -229,6 +229,4 @@ if __name__ == "__main__":
             def verification(session): return verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
-                session, 3, verification)
-
-resultLog.close()
+                session, 150, verification)

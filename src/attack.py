@@ -25,8 +25,8 @@ def deletion_attack(session, step, verify):
             for s in range(step):
                 id_to_delete = choice(range(len(all_ids)))
                 ids_to_delete.append(all_ids.pop(id_to_delete))
-                session.execute_write(db.delete_documents, ids=ids_to_delete)
-                iteration += 1
+            session.execute_write(db.delete_documents, ids=ids_to_delete)
+            iteration += 1
             if iteration % 20 == 0:
                 logging.info("Deleted {num}/{total} nodes".format(num=iteration*step, total=len(all_ids)))
         except:
