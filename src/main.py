@@ -10,6 +10,7 @@ import watermark as wk
 import attack
 import time
 import json
+import plots
 import fake
 import argparse
 import logging
@@ -21,13 +22,14 @@ if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 resultLog = open(os.path.join(log_dir, "results.json"), 'a')
 logging.basicConfig(
-                    handlers=[
-                        logging.FileHandler(os.path.join(log_dir, "basic.log")),
-                        logging.StreamHandler()
-                    ],
-                    format="%(asctime)s [%(levelname)s] %(message)s",
-                    encoding='utf-8', 
-                    level=logging.INFO)
+    handlers=[
+        logging.FileHandler(
+            os.path.join(log_dir, "basic.log")),
+        logging.StreamHandler()
+    ],
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    encoding='utf-8',
+    level=logging.INFO)
 
 
 # Load Environment Variables
@@ -42,6 +44,7 @@ logging.debug("Settings loaded: {settings}".format(
 # CONSTANTS
 URI = os.getenv("DB_URL")
 AUTH = (os.getenv("DB_USER"), os.getenv("DB_PASSWORD"))
+
 
 def get_all_non_company_ids(link):
     result = link.run("match (n)"
@@ -153,6 +156,8 @@ parser.add_argument('--verify', action='store_true',
                     help='Verify the watermark (exit with error if not verified)')
 parser.add_argument('--populate-uk-companies', action='store_true',
                     help='Populate the database with the UK companies dataset')
+parser.add_argument('--generate-plots', action='store_true',
+                    help='Generate and save the plots')
 parser.add_argument("-m", '--deletion-attack', action='store_true',
                     help='Perform a deletion attack on a watermarked database')
 
@@ -226,7 +231,16 @@ if __name__ == "__main__":
     if args.deletion_attack:
         with driver.session(database="neo4j") as session:
             ids = session.execute_read(get_visible_watermark_ids)
+
             def verification(session): return verify_uk_companies(
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
                 session, 150, verification)
+    if args.generate_plots:
+        plot_dir = "plots/"
+        if not os.path.exists(plot_dir):
+            os.makedirs(plot_dir)
+        plot1 = plots.plot_documents_vs_time()
+        plot1.savefig("plots/time_to_watermark.png")
+        plot2 = plots.plot_percDel_vs_numNodes()
+        plot2.savefig("plots/robustness.png")
