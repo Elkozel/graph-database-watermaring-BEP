@@ -20,16 +20,18 @@ def deletion_attack(session, step, verify):
     while True:
         if not verify(session):
             break
-        ids_to_delete = []
-        for s in range(step):
-            try:
+        try:
+            ids_to_delete = []
+            for s in range(step):
                 id_to_delete = choice(range(len(all_ids)))
                 ids_to_delete.append(all_ids.pop(id_to_delete))
-            except:
-                iteration += 1
-                break
-        session.execute_write(db.delete_documents, ids=ids_to_delete)
-        iteration += 1
+            session.execute_write(db.delete_documents, ids=ids_to_delete)
+            iteration += 1
+            if iteration % 20 == 0:
+                logging.info("Deleted {num}/{total} nodes".format(num=iteration*step, total=len(all_ids)))
+        except:
+            iteration += 1
+            break
     nodes_after = session.execute_read(db.all_ids_count)
     attack_summary = {
         "action": "modification_attack",
@@ -38,9 +40,10 @@ def deletion_attack(session, step, verify):
         "nodes_before": nodes_before,
         "nodes_after": nodes_after,
         "nodes_deleted": nodes_before - nodes_after,
-        "num_watermarked_nodes": len(nodes_watermarked)
+        "num_watermarked_nodes": len(nodes_watermarked[0])
     }
     resultLog.write(json.dumps(attack_summary) + "\n")
+    resultLog.flush()
     logging.info("The {action} attack concluded with {deleted_nodes} nodes deleted and {nodes_after} remaining".format(
         action=attack_summary["action"],
         deleted_nodes=attack_summary["nodes_deleted"],
