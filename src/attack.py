@@ -25,10 +25,56 @@ def deletion_attack(session, step, verify):
             for s in range(step):
                 id_to_delete = choice(range(len(all_ids)))
                 ids_to_delete.append(all_ids.pop(id_to_delete))
-            session.execute_write(db.delete_documents, ids=ids_to_delete)
+            result = session.execute_write(db.delete_documents, ids=ids_to_delete)
             iteration += 1
             if iteration % 20 == 0:
-                logging.info("Deleted {num}/{total} nodes".format(num=iteration*step, total=len(all_ids)))
+                logging.info("Deleted {num}/{total} nodes ({result})".format(num=iteration*step, total=len(all_ids), result=result.single()))
+        except:
+            iteration += 1
+            break
+    nodes_after = session.execute_read(db.all_ids_count)
+    attack_summary = {
+        "action": "deletion_attack",
+        "iteration": iteration,
+        "step": step,
+        "nodes_before": nodes_before,
+        "nodes_after": nodes_after,
+        "nodes_deleted": nodes_before - nodes_after,
+        "num_watermarked_nodes": len(nodes_watermarked[0])
+    }
+    resultLog.write(json.dumps(attack_summary) + "\n")
+    resultLog.flush()
+    logging.info("The {action} attack concluded with {deleted_nodes} nodes deleted and {nodes_after} remaining".format(
+        action=attack_summary["action"],
+        deleted_nodes=attack_summary["nodes_deleted"],
+        nodes_after=attack_summary["nodes_after"]
+    ))
+    return iteration
+
+def modification_attack(session, step, verify):
+    """
+    Perform a modification attack on the database
+
+    :param step: the amount of fields that need to be modified
+    :param verify: the function used for verification of the watermark
+    """
+    logging.debug("Modification attack started with step {step}".format(step=step))
+    nodes_before = session.execute_read(db.all_ids_count)
+    nodes_watermarked = session.execute_read(get_visible_watermark_ids)
+    iteration = 0
+    all_ids = session.execute_read(db.get_all_ids)
+    while True:
+        if not verify(session):
+            break
+        try:
+            ids_to_modify = choices(all_ids, k=step)
+            for id in ids_to_modify:
+                document = session.execute_write(db.get_document, id=id)
+                field_to_delete = choice()
+                result = session.execute_write(db.delete_field, id=id, field=field_to_delete)
+            iteration += 1
+            if iteration % 100 == 0:
+                logging.info("Deleted {num} fields ({result})".format(num=iteration*step, result=result.single()))
         except:
             iteration += 1
             break
@@ -50,6 +96,7 @@ def deletion_attack(session, step, verify):
         nodes_after=attack_summary["nodes_after"]
     ))
     return iteration
+
 
 def insertion_attack(session, step, connections_min=0, connections_max=20):
     """

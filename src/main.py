@@ -158,8 +158,10 @@ parser.add_argument('--populate-uk-companies', action='store_true',
                     help='Populate the database with the UK companies dataset')
 parser.add_argument('--generate-plots', action='store_true',
                     help='Generate and save the plots')
-parser.add_argument("-m", '--deletion-attack', action='store_true',
+parser.add_argument("-d", '--deletion-attack', action='store_true',
                     help='Perform a deletion attack on a watermarked database')
+parser.add_argument("-m", '--modification-attack', action='store_true',
+                    help='Perform a modification attack on a watermarked database')
 
 # parser.add_argument('--reset', metavar='N', type=int,
 #                     help='Watermark UK database')
@@ -236,11 +238,19 @@ if __name__ == "__main__":
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
                 session, 150, verification)
+    if args.modification_attack:
+        with driver.session(database="neo4j") as session:
+            ids = session.execute_read(get_visible_watermark_ids)
+
+            def verification(session): return verify_uk_companies(
+                session, ids, settings["key"], settings["watermark_identity"])
+            res = attack.modification_attack(
+                session, 150, verification)
     if args.generate_plots:
         plot_dir = "plots/"
         if not os.path.exists(plot_dir):
             os.makedirs(plot_dir)
         plot1 = plots.plot_documents_vs_time()
         plot1.savefig("plots/time_to_watermark.png")
-        plot2 = plots.plot_percDel_vs_numNodes()
+        plot2 = plots.plot_robustness()
         plot2.savefig("plots/robustness.png")

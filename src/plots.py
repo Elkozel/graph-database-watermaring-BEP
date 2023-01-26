@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import json
 import os
 
@@ -13,12 +14,16 @@ def plot_documents_vs_time():
     x1 = [datapoint["documents_introduced"] for datapoint in watermark_data]
     y1 = [datapoint["duration"] for datapoint in watermark_data]
 
+    print("Documents per second: ", sum(x1)/sum(y1))
+
     # plotting the line 1 points 
     plt.plot(x1, y1)
     
     # naming the x axis
+    plt.xlim(left=0)
     plt.xlabel('Number of pseudo documents')
     # naming the y axis
+    plt.ylim(bottom=0)
     plt.ylabel('Time for watermark')
     # giving a title to my graph
     plt.title('Time to watermark')
@@ -26,30 +31,105 @@ def plot_documents_vs_time():
 
     return plt
 
-def plot_percDel_vs_numNodes():
+def plot_robustness():
     data = ""
     with open('logs/results.json', 'r') as file:
         data = "[" + file.read().rstrip().replace('\n', ',') + "]"
         data = json.loads(data)
-    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "modification_attack"]
+    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "deletion_attack"]
     deletion_data.sort(key=lambda x: x["num_watermarked_nodes"])
     # Generate points
     x1 = [datapoint["num_watermarked_nodes"] for datapoint in deletion_data]
-    y1 = [datapoint["nodes_deleted"]/datapoint["nodes_before"] for datapoint in deletion_data]
+    y1 = [datapoint["nodes_after"]*100/datapoint["nodes_before"] for datapoint in deletion_data]
 
     # plotting the line 1 points 
     plt.plot(x1, y1)
-    
     # naming the x axis
+    # plt.xlim(left=0)
     plt.xlabel('Number of watermarked documents')
     # naming the y axis
-    plt.ylim([0,1])
-    plt.ylabel('\% of nodes deleted')
+    plt.ylim([0,100])
+    plt.ylabel('$\%$ of nodes deleted')
     # giving a title to my graph
     plt.title('Watermark robustness')
     plt.legend()
 
     return plt
+
+def plot_feasability():
+    data = ""
+    with open('logs/results.json', 'r') as file:
+        data = "[" + file.read().rstrip().replace('\n', ',') + "]"
+        data = json.loads(data)
+    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "deletion_attack"]
+    deletion_data.sort(key=lambda x: x["num_watermarked_nodes"])
+    # Generate points
+    x1 = [datapoint["num_watermarked_nodes"]*100/datapoint["nodes_before"] for datapoint in deletion_data]
+    y1 = [datapoint["nodes_after"]*100/datapoint["nodes_before"] for datapoint in deletion_data]
+
+    # plotting the line 1 points 
+    plt.plot(x1, y1)
+    
+    # naming the x axis
+    plt.xlim(left=0)
+    plt.xlabel('$\%$ of pseudo nodes')
+    # naming the y axis
+    plt.ylim([0,100])
+    plt.ylabel('$\%$ of nodes deleted')
+    # giving a title to my graph
+    plt.title('Watermark robustness')
+    plt.legend()
+
+    return plt
+
+def plot_parameter_diff():
+    data = ""
+    with open('logs/results.json', 'r') as file:
+        data = "[" + file.read().rstrip().replace('\n', ',') + "]"
+        data = json.loads(data)
+    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "watermark"]
+    deletion_data.sort(key=lambda x: x["max_group_size"]-x["min_group_size"])
+    # Generate points
+    x1 = [datapoint["max_group_size"]-datapoint["min_group_size"] for datapoint in deletion_data]
+    y1 = [datapoint["documents_introduced"] for datapoint in deletion_data]
+
+    # plotting the line 1 points 
+    plt.plot(x1, y1)
+    
+    # naming the x axis
+    plt.xlabel('Difference between min and max parameter')
+    # naming the y axis
+    plt.ylabel('Documents introduced')
+    # giving a title to my graph
+    plt.title('Parameter Impact')
+    plt.legend()
+
+    return plt
+
+def maybe_3d():
+    data = ""
+    with open('logs/results.json', 'r') as file:
+        data = "[" + file.read().rstrip().replace('\n', ',') + "]"
+        data = json.loads(data)
+    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "watermark"]
+    # setup the figure and axes
+    fig = plt.figure()
+    ax1 = fig.add_subplot(121, projection='3d')
+
+    # data
+    _x = np.array([datapoint["min_group_size"] for datapoint in deletion_data])
+    _y = np.arange([datapoint["max_group_size"] for datapoint in deletion_data])
+    _xx, _yy = np.meshgrid(_x, _y)
+    x, y = _xx.ravel(), _yy.ravel()
+
+    top = x + y
+    bottom = np.zeros_like(top)
+    width = depth = 1
+
+    ax1.bar3d(x, y, bottom, width, depth, top, shade=True)
+    ax1.set_title('Shaded')
+
+    plt.show()
 
 # Run if you only want to generate the plots
 if __name__ == "__main__":
@@ -58,5 +138,15 @@ if __name__ == "__main__":
         os.makedirs(plot_dir)
     plot1 = plot_documents_vs_time()
     plot1.savefig(os.path.join(plot_dir, "time_to_watermark.png"))
-    plot2 = plot_percDel_vs_numNodes()
+    plt.cla()
+    plt.clf()
+    plot2 = plot_robustness()
     plot2.savefig(os.path.join(plot_dir, "robustness.png"))
+    plt.cla()
+    plt.clf()
+    plot3 = plot_feasability()
+    plot3.savefig(os.path.join(plot_dir, "feasability.png"))
+    plt.cla()
+    plt.clf()
+    plot4 = plot_parameter_diff()
+    plot4.savefig(os.path.join(plot_dir, "param_diff.png"))

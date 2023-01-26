@@ -127,6 +127,14 @@ def delete_documents(link, ids):
                       "where id(m) in $ids "
                       "delete r, m", ids=ids
                       )
+    return result
+
+def delete_field(link, id, field):
+    result = link.run("match (m) "
+                      "where id(m) = $id "
+                      "remove m.$field ", id=id, field=field
+                      )
+    return result
 
 
 def delete_everythong(link):
