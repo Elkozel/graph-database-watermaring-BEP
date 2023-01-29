@@ -3,6 +3,7 @@ import pseudo as ps
 from random import choices, choice, randint
 from main import resultLog, get_visible_watermark_ids
 import logging
+import numpy as np
 import json
 
 def deletion_attack(session, step, verify):
@@ -29,8 +30,10 @@ def deletion_attack(session, step, verify):
             iteration += 1
             if iteration % 20 == 0:
                 logging.info("Deleted {num}/{total} nodes ({result})".format(num=iteration*step, total=len(all_ids), result=result.single()))
-        except:
+        except Exception as err:
             iteration += 1
+            logging.error("Error: {err} encountered after modification attack".format(err=err))
+            error = True
             break
     nodes_after = session.execute_read(db.all_ids_count)
     attack_summary = {
@@ -62,20 +65,28 @@ def modification_attack(session, step, verify):
     nodes_before = session.execute_read(db.all_ids_count)
     nodes_watermarked = session.execute_read(get_visible_watermark_ids)
     iteration = 0
-    all_ids = session.execute_read(db.get_all_ids)
+    error = False
+    all_ids = np.array(session.execute_read(db.get_all_ids_with_fields))
     while True:
         if not verify(session):
             break
         try:
-            ids_to_modify = choices(all_ids, k=step)
+            all_choices = np.where(all_ids[:, 1] > 0)[0]
+            ids_to_modify = choices(all_choices, k=step)
             for id in ids_to_modify:
-                document = session.execute_write(db.get_document, id=id)
-                field_to_delete = choice()
-                result = session.execute_write(db.delete_field, id=id, field=field_to_delete)
-                iteration += 1
+                try:
+                    fields = session.execute_read(db.get_fields, id=id.item())
+                    field_to_delete = choice(fields)
+                    result = session.execute_write(db.delete_field, id=id.item(), field=field_to_delete)
+                    iteration += 1
+                    all_ids[id][1] -= 1
+                except Exception as err:
+                    logging.error("Error: {err} encountered after modification attack(inner loop)".format(err=err))
             if iteration % 100 == 0:
-                logging.info("Deleted {num} fields ({result})".format(num=iteration*step, result=result.single()))
-        except:
+                logging.info("Deleted {num} fields".format(num=iteration))
+        except Exception as err:
+            logging.error("Error: {err} encountered after modification attack".format(err=err))
+            error = True
             break
     nodes_after = session.execute_read(db.all_ids_count)
     attack_summary = {
@@ -85,13 +96,14 @@ def modification_attack(session, step, verify):
         "nodes_before": nodes_before,
         "nodes_after": nodes_after,
         "fields_deleted": iteration,
-        "num_watermarked_nodes": len(nodes_watermarked[0])
+        "num_watermarked_nodes": len(nodes_watermarked[0]),
+        "ended_with_error": error
     }
     resultLog.write(json.dumps(attack_summary) + "\n")
     resultLog.flush()
-    logging.info("The {action} attack concluded with {deleted_nodes} nodes deleted and {nodes_after} remaining".format(
+    logging.info("The {action} attack concluded with {fields_nodes} nodes deleted and {nodes_after} remaining".format(
         action=attack_summary["action"],
-        deleted_nodes=attack_summary["nodes_deleted"],
+        fields_nodes=attack_summary["fields_deleted"],
         nodes_after=attack_summary["nodes_after"]
     ))
     return iteration

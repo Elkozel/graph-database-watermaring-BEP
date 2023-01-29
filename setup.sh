@@ -12,6 +12,7 @@ do
     sudo rm -rf ./.db-data
     sudo tar -xzvf ./db/uk_companies.tar.gz -C . >> /dev/null
     echo "Composing docker container"
-    sudo docker compose up # start the containers and wait until complete
+    sudo docker compose up --abort-on-container-exit # start the containers and wait until complete
     echo "Disposing docker container"
+    sudo docker compose down
 done

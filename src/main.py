@@ -173,7 +173,7 @@ main_menu = [
     inquirer.List('Main menu',
                   message="What would you like me to do?",
                   choices=["Watermark UK database",
-                           "Verify watermark", "Perform deletion attack", "Populate database", "Populate UK Companies", "Reset --hard", "Exit"],
+                           "Verify watermark", "Perform deletion attack", "Perform modification attack", "Populate database", "Populate UK Companies", "Reset --hard", "Exit"],
                   ),
 ]
 
@@ -188,14 +188,23 @@ def show_menu():
                     session, settings["key"], settings["watermark_identity"], settings["watermark_visible"])
         case "Verify watermark":
             with driver.session(database="neo4j") as session:
+                ids = session.execute_read(get_visible_watermark_ids)
                 res = verify_uk_companies(
                     session, ids, settings["key"], settings["watermark_identity"])
                 print("Watermark verification: {result}\n".format(result=res))
         case "Perform deletion attack":
             with driver.session(database="neo4j") as session:
+                ids = session.execute_read(get_visible_watermark_ids)
                 def verification(session): return verify_uk_companies(
                     session, ids, settings["key"], settings["watermark_identity"])
                 res = attack.deletion_attack(
+                    session, 50, verification)
+        case "Perform modification attack":
+            with driver.session(database="neo4j") as session:
+                ids = session.execute_read(get_visible_watermark_ids)
+                def verification(session): return verify_uk_companies(
+                    session, ids, settings["key"], settings["watermark_identity"])
+                res = attack.modification_attack(
                     session, 50, verification)
         case "Populate database":
             with driver.session(database="neo4j") as session:

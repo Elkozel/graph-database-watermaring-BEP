@@ -85,6 +85,10 @@ def get_all_ids(link):
     result = link.run("match (n) return id(n)")
     return result.value()
 
+def get_all_ids_with_fields(link):
+    result = link.run("match (n) return id(n), size(keys(n))")
+    return result.values()
+
 
 def get_all_ids_with_labels(link):
     result = link.run("match (n) return id(n), labels(n)[0]")
@@ -103,6 +107,12 @@ def get_documents(link, ids):
                     "where id(m) in $ids "
                     "return m", ids=ids
                     ).value()
+
+def get_fields(link, id):
+    return link.run("match (m) "
+                    "where id(m) = $id "
+                    "return keys(m)", id=id
+                    ).value()[0]
 
 
 def dublicate_documents(link, ids):
@@ -132,10 +142,9 @@ def delete_documents(link, ids):
 def delete_field(link, id, field):
     result = link.run("match (m) "
                       "where id(m) = $id "
-                      "remove m.$field ", id=id, field=field
+                      "remove m.{field} ".format(field=field), id=id
                       )
     return result
-
 
 def delete_everythong(link):
     link.run("match (m)-[r]-(n) delete r, m, n")

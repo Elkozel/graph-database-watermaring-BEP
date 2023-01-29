@@ -10,4 +10,4 @@ RUN pip3 install -r requirements.txt
 COPY src src/
 COPY settings.json .
 
-CMD [ "python3", "src/main.py", "--watermark", "--deletion-attack", "--generate-plots"]
+CMD [ "python3", "src/main.py", "--watermark", "--modification-attack", "--generate-plots"]
