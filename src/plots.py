@@ -56,7 +56,7 @@ def plot_robustness():
 
     return plt
 
-def plot_feasability():
+def plot_usability():
     data = ""
     with open('logs/results.json', 'r') as file:
         data = "[" + file.read().rstrip().replace('\n', ',') + "]"
@@ -144,8 +144,8 @@ if __name__ == "__main__":
     plot2.savefig(os.path.join(plot_dir, "robustness.png"))
     plt.cla()
     plt.clf()
-    plot3 = plot_feasability()
-    plot3.savefig(os.path.join(plot_dir, "feasability.png"))
+    plot3 = plot_usability()
+    plot3.savefig(os.path.join(plot_dir, "usability.png"))
     plt.cla()
     plt.clf()
     plot4 = plot_parameter_diff()
