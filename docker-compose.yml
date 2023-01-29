@@ -3,9 +3,6 @@ services:
   neo4j:
     image: neo4j
     container_name: "Neo4j_Database"
-    ports:
-      - "7474:7474"
-      - "7687:7687"
     volumes:
       - ./.db-data:/data
     environment:
@@ -27,7 +24,7 @@ services:
         condition: service_healthy
     volumes:
       - ./logs:/log/rp/
-      - ./logs:/app/logs/
+      - ./plots:/app/plots
     environment:
       - DB_URL=neo4j://neo4j:7687
       - DB_USER=neo4j

@@ -72,11 +72,10 @@ def modification_attack(session, step, verify):
                 document = session.execute_write(db.get_document, id=id)
                 field_to_delete = choice()
                 result = session.execute_write(db.delete_field, id=id, field=field_to_delete)
-            iteration += 1
+                iteration += 1
             if iteration % 100 == 0:
                 logging.info("Deleted {num} fields ({result})".format(num=iteration*step, result=result.single()))
         except:
-            iteration += 1
             break
     nodes_after = session.execute_read(db.all_ids_count)
     attack_summary = {
@@ -85,7 +84,7 @@ def modification_attack(session, step, verify):
         "step": step,
         "nodes_before": nodes_before,
         "nodes_after": nodes_after,
-        "nodes_deleted": nodes_before - nodes_after,
+        "fields_deleted": iteration,
         "num_watermarked_nodes": len(nodes_watermarked[0])
     }
     resultLog.write(json.dumps(attack_summary) + "\n")
