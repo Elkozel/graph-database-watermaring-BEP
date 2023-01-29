@@ -76,10 +76,12 @@ def modification_attack(session, step, verify):
             for id in ids_to_modify:
                 try:
                     fields = session.execute_read(db.get_fields, id=id.item())
+                    if len(fields) == 0:
+                        continue
                     field_to_delete = choice(fields)
                     result = session.execute_write(db.delete_field, id=id.item(), field=field_to_delete)
                     iteration += 1
-                    all_ids[id][1] -= 1
+                    all_ids[np.where(all_ids[:,0]==id)[0][0]][1] -= 1
                 except Exception as err:
                     logging.error("Error: {err} encountered after modification attack(inner loop)".format(err=err))
             if iteration % 100 == 0:
