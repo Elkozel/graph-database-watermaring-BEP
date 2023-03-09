@@ -72,6 +72,8 @@ def modification_attack(session, step, verify):
             break
         try:
             all_choices = np.where(all_ids[:, 1] > 0)[0]
+            if len(all_choices) == 0:
+                break
             ids_to_modify = choices(all_choices, k=step)
             for id in ids_to_modify:
                 try:
