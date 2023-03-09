@@ -160,6 +160,8 @@ parser.add_argument('--generate-plots', action='store_true',
                     help='Generate and save the plots')
 parser.add_argument("-d", '--deletion-attack', action='store_true',
                     help='Perform a deletion attack on a watermarked database')
+parser.add_argument("-d", '--deletion-attack-fast', action='store_true',
+                    help='Perform a fast deletion attack without deleting items from the database')
 parser.add_argument("-m", '--modification-attack', action='store_true',
                     help='Perform a modification attack on a watermarked database')
 
@@ -173,7 +175,7 @@ main_menu = [
     inquirer.List('Main menu',
                   message="What would you like me to do?",
                   choices=["Watermark UK database",
-                           "Verify watermark", "Perform deletion attack", "Perform modification attack", "Populate database", "Populate UK Companies", "Reset --hard", "Exit"],
+                           "Verify watermark", "Perform deletion attack", "Perform fast deletion attack", "Perform modification attack", "Populate database", "Populate UK Companies", "Reset --hard", "Exit"],
                   ),
 ]
 
@@ -192,6 +194,10 @@ def show_menu():
                 res = verify_uk_companies(
                     session, ids, settings["key"], settings["watermark_identity"])
                 print("Watermark verification: {result}\n".format(result=res))
+        case "Perform fast deletion attack":
+            with driver.session(database="neo4j") as session:
+                percentages = [0.1, 0.3, 0.5, 0.6, 0.75, 0.8, 0.9, 0.95, 0.98]
+                res = attack.deletion_attack_short(session, percentages, 10)
         case "Perform deletion attack":
             with driver.session(database="neo4j") as session:
                 ids = session.execute_read(get_visible_watermark_ids)
@@ -247,6 +253,10 @@ if __name__ == "__main__":
                 session, ids, settings["key"], settings["watermark_identity"])
             res = attack.deletion_attack(
                 session, 150, verification)
+    if args.deletion_attack_fast:
+        with driver.session(database="neo4j") as session:
+            percentages = [0.1, 0.3, 0.5, 0.6, 0.75, 0.8, 0.9, 0.95, 0.98]
+            res = attack.deletion_attack_short(session, percentages, 10)
     if args.modification_attack:
         with driver.session(database="neo4j") as session:
             ids = session.execute_read(get_visible_watermark_ids)
