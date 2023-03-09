@@ -67,7 +67,7 @@ def get_visible_watermark_ids(link):
     return [result1.value(), result2.value()]
 
 
-def watermark_uk_companies(session, watermark_key: int, watermark_identity: str, watermark_visibility: bool = False, min_group_size: int = 10, max_group_size: int = 100):
+def watermark_uk_companies(session, watermark_key: int, watermark_identity: str, watermark_visibility: bool = False, min_group_size: int = 10, max_group_size: int = 200):
     """
     Watermark the UK companies database
 
@@ -83,7 +83,8 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
     all_non_company_ids = session.execute_read(get_all_non_company_ids)
     logging.debug("{number} ids were fetched".format(number=id_count))
     start_time = time.time()
-    watermarked = wk.watermark_database(session,
+    watermarked = []
+    watermarked.append(wk.watermark_database(session,
                                         ids=all_company_ids,
                                         min_group_size=min_group_size,
                                         max_group_size=max_group_size,
@@ -95,7 +96,20 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
                                             "mortgagesOutstanding", "SIC", "category"],
                                         watermark_key=watermark_key,
                                         watermark_identity=watermark_identity,
-                                        watermark_visibility=watermark_visibility)
+                                        watermark_visibility=watermark_visibility))
+    watermarked.append(wk.watermark_database(session,
+                                        ids=all_non_company_ids,
+                                        min_group_size=min_group_size,
+                                        max_group_size=max_group_size,
+                                        watermarked_document_type="Property",
+                                        watermark_cover_field="price",
+                                        watermarked_document_fields=[
+                                            "titleNumber", "county", "district"],
+                                        watermarked_document_optional_fields=[
+                                            "address"],
+                                        watermark_key=watermark_key,
+                                        watermark_identity=watermark_identity,
+                                        watermark_visibility=watermark_visibility))
     end_time = time.time()
     log_result = {
         "action": "watermark",
@@ -106,15 +120,17 @@ def watermark_uk_companies(session, watermark_key: int, watermark_identity: str,
         "number_company_ids": number_company_ids,
         "number_non_company_ids": len(all_non_company_ids),
         "number_nodes_before": id_count,
-        "documents_introduced": len(watermarked)
+        "documents_introduced_company": len(watermarked[0]),
+        "documents_introduced_property": len(watermarked[1]),
+        "documents_introduced": len(watermarked[0]) + len(watermarked[1])
     }
     resultLog.write(json.dumps(log_result) + "\n")
     resultLog.flush()
     logging.debug("Database was watermarked in {time} seconds".format(
         time=end_time-start_time))
     logging.info("{number} pseudo nodes introduced".format(
-        number=len(watermarked)))
-    return [watermarked, []]
+        number=len(watermarked[0]) + len(watermarked[1])))
+    return watermarked
 
 
 def verify_uk_companies(session, watermarked_ids: tuple[List[int], List[int]], key: int, watermark_identity: str, fast_check: bool = True):
@@ -160,7 +176,7 @@ parser.add_argument('--generate-plots', action='store_true',
                     help='Generate and save the plots')
 parser.add_argument("-d", '--deletion-attack', action='store_true',
                     help='Perform a deletion attack on a watermarked database')
-parser.add_argument("-d", '--deletion-attack-fast', action='store_true',
+parser.add_argument('--deletion-attack-fast', action='store_true',
                     help='Perform a fast deletion attack without deleting items from the database')
 parser.add_argument("-m", '--modification-attack', action='store_true',
                     help='Perform a modification attack on a watermarked database')
@@ -255,8 +271,8 @@ if __name__ == "__main__":
                 session, 150, verification)
     if args.deletion_attack_fast:
         with driver.session(database="neo4j") as session:
-            percentages = [0.1, 0.3, 0.5, 0.6, 0.75, 0.8, 0.9, 0.95, 0.98]
-            res = attack.deletion_attack_short(session, percentages, 10)
+            percentages = [0.1, 0.3, 0.5, 0.6, 0.75, 0.8, 0.9, 0.95, 0.98, 0.99]
+            res = attack.deletion_attack_short(session, percentages, 15)
     if args.modification_attack:
         with driver.session(database="neo4j") as session:
             ids = session.execute_read(get_visible_watermark_ids)

@@ -19,6 +19,7 @@ services:
     
   actor:
     image: rp/modification
+    build: ./
     depends_on:
       neo4j:
         condition: service_healthy

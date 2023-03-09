@@ -143,6 +143,8 @@ def insertion_attack(session, step, connections_min=0, connections_max=20):
             session.execute_write(db.create_relation, source_id=doc_id, dest_id=connection, type="Connection")
 
 def intersection(lst1, lst2):
+    lst1 = list(dict.fromkeys(lst1))
+    lst2 = list(dict.fromkeys(lst2))
     lst3 = [value for value in lst1 if value in lst2]
     return lst3
 
@@ -157,12 +159,15 @@ def deletion_attack_short(session, percentages, iterations):
     logging.debug("Short deletion attack started")
     nodes_all_ids = session.execute_read(db.get_all_ids)
     nodes_watermarked = session.execute_read(get_visible_watermark_ids)
-    percentage_nodes = [len(nodes_all_ids)*p for p in percentages]
+    percentage_nodes = [int(len(nodes_all_ids)*p) for p in percentages]
     results = {}
     for s in range(iterations):
         for index, deletions in enumerate(percentage_nodes):
             deleted_nodes = choices(nodes_all_ids, k=deletions)
-            nodes_deleted = intersection(deleted_nodes, nodes_watermarked[0])
+            nodes_deleted_company = intersection(deleted_nodes, nodes_watermarked[0])
+            nodes_deleted_property = intersection(deleted_nodes, nodes_watermarked[1])
+            nodes_deleted = nodes_deleted_company
+            nodes_deleted.extend(nodes_deleted_property)
             percentage_str = str(percentages[index])
             results[percentage_str] = len(nodes_deleted)
 
@@ -170,7 +175,7 @@ def deletion_attack_short(session, percentages, iterations):
                "action": "deletion_attack_fast",
                "results": results,
                 "nodes_before": len(nodes_all_ids),
-                "num_watermarked_nodes": len(nodes_watermarked[0])
+                "num_watermarked_nodes": len(nodes_watermarked[0]) + len(nodes_watermarked[1])
             }
         resultLog.write(json.dumps(attack_summary) + "\n")
         resultLog.flush()
