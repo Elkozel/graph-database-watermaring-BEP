@@ -271,7 +271,7 @@ if __name__ == "__main__":
                 session, 150, verification)
     if args.deletion_attack_fast:
         with driver.session(database="neo4j") as session:
-            percentages = [0.1, 0.3, 0.5, 0.6, 0.75, 0.8, 0.9, 0.95, 0.98, 0.99]
+            percentages = [0.0, 0.05, 0.1, 0.2, 0.4, 0.5, 0.6, 0.8, 0.9, 0.95, 1]
             res = attack.deletion_attack_short(session, percentages, 15)
     if args.modification_attack:
         with driver.session(database="neo4j") as session:

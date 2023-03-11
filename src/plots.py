@@ -21,12 +21,12 @@ def plot_documents_vs_time():
     
     # naming the x axis
     plt.xlim(left=0)
-    plt.xlabel('Number of pseudo documents')
+    plt.xlabel('Number of pseudo documents ($|G^P_w|$)')
     # naming the y axis
     plt.ylim(bottom=0)
-    plt.ylabel('Time for watermark')
+    plt.ylabel('Time for watermark ($s$)')
     # giving a title to my graph
-    plt.title('Time to watermark')
+    plt.title('Watermark performance')
     plt.legend()
 
     return plt
@@ -111,14 +111,14 @@ def maybe_3d():
     with open('logs/results.json', 'r') as file:
         data = "[" + file.read().rstrip().replace('\n', ',') + "]"
         data = json.loads(data)
-    deletion_data = [datapoint for datapoint in data if datapoint["action"] == "watermark"]
+    watermarked_data = [datapoint for datapoint in data if datapoint["action"] == "watermark"]
     # setup the figure and axes
     fig = plt.figure()
     ax1 = fig.add_subplot(121, projection='3d')
 
     # data
-    _x = np.array([datapoint["min_group_size"] for datapoint in deletion_data])
-    _y = np.arange([datapoint["max_group_size"] for datapoint in deletion_data])
+    _x = np.array([datapoint["min_group_size"] for datapoint in watermarked_data])
+    _y = np.array([datapoint["max_group_size"] for datapoint in watermarked_data])
     _xx, _yy = np.meshgrid(_x, _y)
     x, y = _xx.ravel(), _yy.ravel()
 
@@ -171,6 +171,44 @@ def plot_security():
 
     return plt
 
+def plot_security_fast():
+    data = ""
+    with open('logs/results.json', 'r') as file:
+        data = "[" + file.read().rstrip().replace('\n', ',') + "]"
+        data = json.loads(data)
+    deletion_data = np.array([datapoint for datapoint in data if datapoint["action"] == "deletion_attack_fast"])
+    nodes_introduced = np.array([d["num_watermarked_nodes"] for d in deletion_data])
+    nodes_introduced_unique = np.unique(nodes_introduced)
+    
+    # fix lines
+    colors = ['tab:red', 'tab:blue', 'tab:green', 'tab:pink', 'tab:olive']
+    lines = 5
+    percentage = [float(d)*100 for d in deletion_data[0]["results"].keys()]
+
+    fig, ax1 = plt.subplots()
+    for line in range(lines):
+        target = int(line*len(nodes_introduced_unique)/lines)
+        target = nodes_introduced_unique[target]
+        bin_ids = np.argwhere(nodes_introduced==target)
+        if bin_ids.size == 0:
+            continue
+        bin_data = [(np.array(list(d[0]['results'].values()))/float(d[0]['num_watermarked_nodes'])) for d in np.take(deletion_data, bin_ids)]
+        averages = np.average(bin_data, axis=0)
+        label = "$|G_w|$ = " + str(target)
+        ax1.plot(percentage, 100-averages*100, label=label)
+
+    ax1.set_xlim([0,100])
+    ax1.set_xlabel('$\%$ of deleted nodes')
+    ax1.set_ylim([0,100])
+    ax1.set_ylabel('$\%$ of survived nodes')
+
+    fig.tight_layout()  # otherwise the right y-label is slightly clipped
+    # giving a title to my graph
+    plt.title('Watermark robustness')
+    plt.legend()
+
+    return plt
+
 
 # Run if you only want to generate the plots
 if __name__ == "__main__":
@@ -193,6 +231,11 @@ if __name__ == "__main__":
     plot4.savefig(os.path.join(plot_dir, "param_diff.png"))
     plt.cla()
     plt.clf()
-    plot5 = plot_security()
-    plot5.savefig(os.path.join(plot_dir, "security.png"))
+    # plot5 = maybe_3d()
+    # plot5.savefig(os.path.join(plot_dir, "3D.png"))
+    plt.cla()
+    plt.clf()
+    plot6 = plot_security_fast()
+    plot6.show()
+    plot6.savefig(os.path.join(plot_dir, "figure_robustness.png"))
 

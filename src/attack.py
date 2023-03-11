@@ -1,6 +1,6 @@
 import database as db
 import pseudo as ps
-from random import choices, choice, randint
+from random import sample, choice, randint
 from main import resultLog, get_visible_watermark_ids
 import logging
 import numpy as np
@@ -72,7 +72,7 @@ def modification_attack(session, step, verify):
             break
         try:
             all_choices = np.where(all_ids[:, 1] > 0)[0]
-            ids_to_modify = choices(all_choices, k=step)
+            ids_to_modify = sample(all_choices, k=step)
             for id in ids_to_modify:
                 try:
                     fields = session.execute_read(db.get_fields, id=id.item())
@@ -134,7 +134,7 @@ def insertion_attack(session, step, connections_min=0, connections_max=20):
             document=doc,
             node_type=node_type
         )
-        connections = list(set(choices(all_ids, k=randint(connections_min, connections_max))))
+        connections = list(set(sample(all_ids, k=randint(connections_min, connections_max))))
         for connection in connections:
             # skip if connection is to itself
             if connection == doc_id:
@@ -163,13 +163,11 @@ def deletion_attack_short(session, percentages, iterations):
     results = {}
     for s in range(iterations):
         for index, deletions in enumerate(percentage_nodes):
-            deleted_nodes = choices(nodes_all_ids, k=deletions)
+            deleted_nodes = sample(nodes_all_ids, k=deletions)
             nodes_deleted_company = intersection(deleted_nodes, nodes_watermarked[0])
             nodes_deleted_property = intersection(deleted_nodes, nodes_watermarked[1])
-            nodes_deleted = nodes_deleted_company
-            nodes_deleted.extend(nodes_deleted_property)
             percentage_str = str(percentages[index])
-            results[percentage_str] = len(nodes_deleted)
+            results[percentage_str] = len(nodes_deleted_company) + len(nodes_deleted_property)
 
         attack_summary = {
                "action": "deletion_attack_fast",
